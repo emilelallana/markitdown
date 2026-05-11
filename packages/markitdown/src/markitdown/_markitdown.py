@@ -99,10 +99,12 @@ class MarkItDown:
         *,
         enable_builtins: Union[None, bool] = None,
         enable_plugins: Union[None, bool] = None,
+        human_friendly: bool = False,
         **kwargs,
     ):
         self._builtins_enabled = False
         self._plugins_enabled = False
+        self._human_friendly = human_friendly
 
         requests_session = kwargs.get("requests_session")
         if requests_session is None:
@@ -576,6 +578,9 @@ class MarkItDown:
 
                 if "exiftool_path" not in _kwargs and self._exiftool_path is not None:
                     _kwargs["exiftool_path"] = self._exiftool_path
+
+                if "human_friendly" not in _kwargs:
+                    _kwargs["human_friendly"] = self._human_friendly
 
                 # Add the list of converters for nested processing
                 _kwargs["_parent_converters"] = self._converters

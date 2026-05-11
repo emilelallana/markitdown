@@ -110,6 +110,18 @@ def main():
         help="Keep data URIs (like base64-encoded images) in the output. By default, data URIs are truncated.",
     )
 
+    parser.add_argument(
+        "-H",
+        "--human-friendly",
+        action="store_true",
+        help=(
+            "Post-process output for human readability. "
+            "Removes page headers/footers, rejoins hyphenated words, "
+            "and promotes detected section headings to Markdown syntax. "
+            "Currently applies to PDF files only."
+        ),
+    )
+
     parser.add_argument("filename", nargs="?")
     args = parser.parse_args()
 
@@ -191,10 +203,14 @@ def main():
             sys.stdin.buffer,
             stream_info=stream_info,
             keep_data_uris=args.keep_data_uris,
+            human_friendly=args.human_friendly,
         )
     else:
         result = markitdown.convert(
-            args.filename, stream_info=stream_info, keep_data_uris=args.keep_data_uris
+            args.filename,
+            stream_info=stream_info,
+            keep_data_uris=args.keep_data_uris,
+            human_friendly=args.human_friendly,
         )
 
     _handle_output(args, result)

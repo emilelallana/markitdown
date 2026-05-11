@@ -6,6 +6,7 @@ from typing import BinaryIO, Any
 from .._base_converter import DocumentConverter, DocumentConverterResult
 from .._stream_info import StreamInfo
 from .._exceptions import MissingDependencyException, MISSING_DEPENDENCY_MESSAGE
+from ._text_postprocessor import TextPostprocessor
 
 # Pattern for MasterFormat-style partial numbering (e.g., ".1", ".2", ".10")
 PARTIAL_NUMBERING_PATTERN = re.compile(r"^\.\d+$")
@@ -521,6 +522,7 @@ class PdfConverter(DocumentConverter):
         self,
         file_stream: BinaryIO,
         stream_info: StreamInfo,
+        human_friendly: bool = False,
         **kwargs: Any,
     ) -> DocumentConverterResult:
         if _dependency_exc_info is not None:
@@ -538,6 +540,10 @@ class PdfConverter(DocumentConverter):
 
         # Read file stream into BytesIO for compatibility with pdfplumber
         pdf_bytes = io.BytesIO(file_stream.read())
+
+        # Collect plain-text page content for header/footer detection when
+        # human_friendly mode is requested.
+        plain_page_texts: list[str] = []
 
         try:
             # Single pass: check every page for form-style content.
@@ -562,6 +568,7 @@ class PdfConverter(DocumentConverter):
                         text = page.extract_text()
                         if text and text.strip():
                             markdown_chunks.append(text.strip())
+                            plain_page_texts.append(text.strip())
 
                     page.close()  # Free cached page data immediately
 
@@ -584,6 +591,13 @@ class PdfConverter(DocumentConverter):
             markdown = pdfminer.high_level.extract_text(pdf_bytes)
 
         # Post-process to merge MasterFormat-style partial numbering with following text
+        # (must run before human-friendly cleanup so the cleanup pipeline sees
+        # already-merged numbering lines)
         markdown = _merge_partial_numbering_lines(markdown)
+
+        if human_friendly:
+            postprocessor = TextPostprocessor()
+            page_ctx = plain_page_texts if len(plain_page_texts) >= 2 else None
+            markdown = postprocessor.process(markdown, page_texts=page_ctx)
 
         return DocumentConverterResult(markdown=markdown)
