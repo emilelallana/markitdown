@@ -117,6 +117,8 @@ class TextPostprocessor:
         # Normalise line endings first
         text = re.sub(r"\r\n", "\n", text)
         text = re.sub(r"\r", "\n", text)
+        # pdfminer uses \x0c (form feed) as a page separator; treat as paragraph break
+        text = re.sub(r"\x0c", "\n\n", text)
 
         lines = text.split("\n")
         result = []

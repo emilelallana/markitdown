@@ -577,6 +577,13 @@ class PdfConverter(DocumentConverter):
             if form_page_count == 0:
                 pdf_bytes.seek(0)
                 markdown = pdfminer.high_level.extract_text(pdf_bytes)
+                # Rebuild per-page texts from pdfminer's own output so that
+                # header/footer pattern detection operates on the same text
+                # as the final markdown (pdfminer separates pages with \x0c).
+                if human_friendly:
+                    plain_page_texts = [
+                        p.strip() for p in markdown.split("\x0c") if p.strip()
+                    ]
             else:
                 markdown = "\n\n".join(markdown_chunks).strip()
 
@@ -584,6 +591,10 @@ class PdfConverter(DocumentConverter):
             # Fallback if pdfplumber fails
             pdf_bytes.seek(0)
             markdown = pdfminer.high_level.extract_text(pdf_bytes)
+            if human_friendly:
+                plain_page_texts = [
+                    p.strip() for p in markdown.split("\x0c") if p.strip()
+                ]
 
         # Fallback if still empty
         if not markdown:
